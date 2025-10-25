@@ -5,4 +5,6 @@
 src/mnist.npz
 
 # macos finder junk
+.DS_Store
+src/.DS_Store
 Icon?
