@@ -93,21 +93,25 @@ b1 = np.zeros((1, 128))               # biases
 w2 = np.random.randn(128, 10) * 0.01
 b2 = np.zeros((1, 10))
 
+
+num_epochs = 7
+learning_rate = 0.01
+for epoch in range(num_epochs):
 # forward pass
 # z is a 1x128 vector with elements representing pre-activation of neurons
 # z = xw + b
 # x_train.shape = (60k, 784); (xtrain dot w1).shape = (60k, 128)
 # ReLU = rectified linear unit, zeroes out negative values
 # z1.shape = a1.shape
-z1 = np.dot(x_train, w1) + b1    # linear step for hidden layer
-a1 = np.maximum(0, z1)
+    z1 = np.dot(x_train, w1) + b1    # linear step for hidden layer
+    a1 = np.maximum(0, z1)
 
 # output layer
 # z = aw + b
 # softmax converts logits into probabilities that we can compare to one hot labels
-z2 = np.dot(a1, w2) + b2    # shape = (60k, 10), contains logits
-exp_scores = np.exp(z2)    # exponentiate
-a2 = exp_scores / np.sum(exp_scores, axis =1, keepdims=True)
+    z2 = np.dot(a1, w2) + b2    # shape = (60k, 10), contains logits
+    exp_scores = np.exp(z2)    # exponentiate
+    a2 = exp_scores / np.sum(exp_scores, axis =1, keepdims=True)
 # ^ divide by sum of row to normalize for probability
 # ^ axis=1 is sum across columns, keepdims prevents dimension collapse
 
@@ -120,17 +124,37 @@ a2 = exp_scores / np.sum(exp_scores, axis =1, keepdims=True)
 # - loss = scalar loss measuring performance
 # - log amplifies differences near zero + allows addition of probs
 # - must negate because log of 0<x<1 is negative
-loss = -np.mean(np.sum(y_train_encoded * np.log(a2), axis=1))
+    loss = -np.mean(np.sum(y_train_encoded * np.log(a2), axis=1))
 
 # ~~~~~ Backprop ~~~~~
 
 # - dz2 = derivative of loss w.r.t. z2 before softmax aka output error
-# - cross entropy and softmax simply derivative to a - y
-dz2 = a2 - y_train_encoded    # shape = (batch_size, 10)
+# - cross entropy and softmax simplify derivative to a - y
+# - .T is for transpose, makes result match W2 dims and makes multiplication naturally sum over samples
+# we calculate derivatives starting from the output layer z2 and move backward using the chain rule
+# this required me to brush up on my calculus; i will tentatively include on github the notes i took to illustrate the full backward pass mathematically
+# remember that dot products produce scalars and dividing by samples (x_train.shape[0]) gives the average gradient over the batch
+    dL_dz2 = a2 - y_train_encoded    # shape = (batch_size, 10)
+    dL_dw2 = np.dot(a1.T, dL_dz2) / x_train.shape[0]
+    dL_db2 = np.sum(dL_dz2, axis=0, keepdims=True) / x_train.shape[0]
+
+    dL_da1 = np.dot(dL_dz2, w2.T)    # propagates error backward
+    dL_dz1 = dL_da1 * (z1 > 0)       # hidden layer preactivation
+    dL_dw1 = np.dot(x_train.T, dL_dz1) / x_train.shape[0]
+    dL_db1 = np.sum(dL_dz1, axis=0, keepdims=True) / x_train.shape[0]
+    
+    # gradient descent
+    # subtracting moves the weights opposite to the gradient which decreases loss
+    w1 -= learning_rate * dL_dw1
+    b1 -= learning_rate * dL_db1
+    w2 -= learning_rate * dL_dw2
+    b2 -= learning_rate * dL_db2
+
+    print(f"Epoch {epoch}, Loss: {loss}")
 
 
 
 
 
 
-#if __name__ == "__main__":
+

@@ -1,0 +1,8 @@
+# virtual environment
+.venv/
+
+# MNIST data
+src/mnist.npz
+
+# macos finder junk
+Icon?
